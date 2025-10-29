@@ -1,9 +1,8 @@
-from datetime import timezone
 from django.db import models
-from chats.models import Chat
+from django.utils import timezone
 from users.models import User
+from chats.models import Chat
 
-# Create your models here.
 
 class Message(models.Model):
     chat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name='messages')
@@ -16,20 +15,7 @@ class Message(models.Model):
 
     def __str__(self):
         return f"{self.sender.username}: {self.content[:30]}" if self.content else "Media message"
-    
 
-class MessageStatus(models.Model):
-    message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='statuses')
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    is_read = models.BooleanField(default=False)
-    read_at = models.DateTimeField(blank=True, null=True)
-
-    class Meta:
-        unique_together = ('message', 'user')
-
-    def __str__(self):
-        return f"{self.user.username} → {self.message.id} ({'read' if self.is_read else 'unread'})"
-    
 
 class Media(models.Model):
     MEDIA_TYPES = (
@@ -47,3 +33,16 @@ class Media(models.Model):
     def __str__(self):
         return f"{self.media_type} for message {self.message.id}"
 
+
+class MessageStatus(models.Model):
+
+    message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='statuses')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    is_read = models.BooleanField(default=False)
+    read_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        unique_together = ('message', 'user')
+
+    def __str__(self):
+        return f"{self.user.username} → {self.message.id} ({'read' if self.is_read else 'unread'})"
