@@ -57,7 +57,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = "config.urls"
+ROOT_URLCONF = "project.urls"
 
 TEMPLATES = [
     {
@@ -75,7 +75,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "config.wsgi.application"
+WSGI_APPLICATION = "project.wsgi.application"
 
 
 # Database
@@ -136,7 +136,8 @@ ASGI_APPLICATION = 'telegram_backend.asgi.application'
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {"hosts": [("127.0.0.1", 6379)]},
+        "PROJECT": {"hosts": [("127.0.0.1", 6379)]},
+        # "CONFIG": {"hosts": [("127.0.0.1", 6379)]},
     },
 }
 

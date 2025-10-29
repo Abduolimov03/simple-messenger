@@ -5,6 +5,7 @@ from channels.auth import AuthMiddlewareStack
 from chat_messages.routing import websocket_urlpatterns
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'telegram_backend.settings')
+# os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'project.asgi.settings')
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
