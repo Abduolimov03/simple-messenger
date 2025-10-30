@@ -4,6 +4,9 @@ from users.models import User
 from .models import Media, Message, MessageStatus
 from .serializers import MediaSerilizer, MessageSerializer, MessageStatusSerializer
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from log.log import setup_logger
+
+logger = setup_logger('chat_messages')
 
 class MessageViewSet(viewsets.ModelViewSet):
     queryset = Message.objects.all().order_by('-sent_at')
@@ -13,6 +16,7 @@ class MessageViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = self.request.user if self.request.user.is_authenticated else User.objects.first()
         serializer.save(sender=user)
+        logger.info(f"Message created: {serializer.data}")
     # permission_classes = [permissions.AllowAny]
     #
     # def perform_create(self, serializer):
