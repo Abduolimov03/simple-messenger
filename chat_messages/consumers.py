@@ -1,16 +1,15 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
-from channels.db import database_sync_to_async
+from django.contrib.auth.models import User
 from .models import Message
-from users.models import User
-from chats.models import Chat
+from django.utils.timezone import now
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        self.chat_id = self.scope['url_route']['kwargs']['chat_id']
-        self.room_group_name = f"chat_{self.chat_id}"
+        self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
+        self.room_group_name = f"chat_{self.room_name}"
 
-
+        # Kanalga ulanish
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
 
@@ -19,33 +18,33 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         data = json.loads(text_data)
-        message = data.get('message')
-        sender_id = self.scope['user'].id
+        message = data["message"]
+        sender_username = data["sender"]
+        receiver_username = data["receiver"]
 
-        msg_obj = await self.save_message(self.chat_id, sender_id, message)
+        await self.save_message(sender_username, receiver_username, message)
 
         await self.channel_layer.group_send(
             self.room_group_name,
             {
-                'type': 'chat_message',
-                'message': message,
-                'sender' : self.scope['user'].username,
-                'message_id' : msg_obj.id
-
+                "type": "chat_message",
+                "message": message,
+                "sender": sender_username,
+                "receiver": receiver_username,
+                "timestamp": now().strftime("%H:%M:%S"),
             }
         )
 
     async def chat_message(self, event):
-        await self.send(text_data=json.dumps({
-            'message' : event['message'],
-            'sender' : event['sender'],
-            'message_id' : event['message_id']
-        }))
+        await self.send(text_data=json.dumps(event))
 
-    @database_sync_to_async
-    def save_message(self, chat_id, sender_id, content):
-        chat = Chat.objects.get(id=chat_id)
-        sender = User.objects.get(id=sender_id)
-        return Message.objects.create(chat=chat, sender=sender, content=content)
-
-    
+    @staticmethod
+    async def save_message(sender_username, receiver_username, message):
+        try:
+            sender = User.objects.get(username=sender_username)
+            receiver = User.objects.get(username=receiver_username)
+            Message.objects.create(
+                sender=sender, receiver=receiver, content=message
+            )
+        except User.DoesNotExist:
+            pass
