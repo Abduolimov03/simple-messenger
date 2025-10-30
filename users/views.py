@@ -25,36 +25,55 @@ class UserViewSet(viewsets.ModelViewSet):
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     pass
 
-class RegisterView(generics.CreateAPIView):
+class RegisterView(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]
-    
-    def perform_create(self, serializer):
-        serializer.save()
-    
-class LoginView(generics.CreateAPIView):
+    @action(detail=False, methods=['post'], permission_classes = [permissions.AllowAny])
+    def register_user(self, request):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class LoginView(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = CustomTokenObtainPairSerializer
     permission_classes = [permissions.AllowAny]
-    
-    def perform_create(self, serializer):
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+    @action(detail=False, methods=['post'], permission_classes = [permissions.AllowAny])
+    def login_user(self, request):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+            })
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-class CustomTokenObtainPairView(TokenObtainPairView):
+    
+class CustomTokenObtainPairView(viewsets.ModelViewSet):
+    queryset = User.objects.all()
     serializer_class = CustomTokenObtainPairSerializer
     permission_classes = [permissions.AllowAny]
-    
-    def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
-        return response
+    @action(detail=False, methods=['post'], permission_classes = [permissions.AllowAny])
+    def get_token(self, request):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class LogoutView(APIView):
+class LogoutView(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = CustomTokenObtainPairSerializer
     permission_classes = [permissions.IsAuthenticated]
-    
-    def post(self, request):
+
+    @action(detail=False, methods=['post'], permission_classes = [permissions.IsAuthenticated])
+    def logout_user(self, request):
         refresh_token = request.data.get("refresh")
         if not refresh_token:
             return Response({"detail": "Refresh token is required."}, status=status.HTTP_400_BAD_REQUEST)
@@ -63,6 +82,10 @@ class LogoutView(APIView):
             token.blacklist()
         except Exception as e:
             return Response({"detail": "Invalid token."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_200_OK)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
         return Response(status=status.HTTP_200_OK)
 
 
