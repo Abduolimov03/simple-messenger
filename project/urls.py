@@ -22,5 +22,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("chat_messages/", include("chat_messages.urls")),
     path("chat/", include("chats.urls")),
+    path('users/',include('users.urls')),
     path('login/', include('rest_framework.urls')),  # login
 ]
