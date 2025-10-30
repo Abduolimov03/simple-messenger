@@ -25,7 +25,7 @@ class Media(models.Model):
         ('document', 'Document'),
     )
 
-    message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='media')
+    message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='media', null=True, blank=True)
     file = models.FileField(upload_to='message_media/')
     media_type = models.CharField(max_length=20, choices=MEDIA_TYPES)
     uploaded_at = models.DateTimeField(default=timezone.now)
