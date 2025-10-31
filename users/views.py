@@ -1,5 +1,6 @@
 from django.utils import timezone
 from rest_framework import viewsets, status, permissions
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.decorators import action, api_view, permission_classes
 from .models import User, Device
@@ -57,10 +58,14 @@ class LogoutView(APIView):
 class DeviceViewSet(viewsets.ModelViewSet):
     queryset = Device.objects.all()
     serializer_class = DeviceSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    # permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [AllowAny] # test qilish uchun
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        serializer.save()
+    #
+    # def perform_create(self, serializer):
+    #     serializer.save(user=self.request.user)
 
 
     
