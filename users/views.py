@@ -26,7 +26,7 @@ class UserViewSet(viewsets.ModelViewSet):
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     pass
 
-class RegisterView(generics.CreateAPIView):
+class RegisterView(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]
