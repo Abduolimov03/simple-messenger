@@ -99,6 +99,11 @@
           document.getElementById('disconnectChat').disabled = false;
         };
 
+        chatSocket.onerror = (err) => {
+          appendMessage('[chat WS] error: ' + (err?.message || JSON.stringify(err)));
+          console.error('chatSocket error', err);
+        };
+
         chatSocket.onmessage = (e) => {
           try {
             const data = JSON.parse(e.data);
@@ -116,10 +121,11 @@
           }
         };
 
-        chatSocket.onclose = () => {
-          appendMessage('[chat WS] disconnected');
+        chatSocket.onclose = (ev) => {
+          appendMessage('[chat WS] disconnected (code=' + ev.code + ', reason=' + (ev.reason || '') + ')');
           document.getElementById('connectChat').disabled = false;
           document.getElementById('disconnectChat').disabled = true;
+          console.info('chatSocket closed', ev);
         };
       });
 
@@ -140,10 +146,15 @@
         userSocket.onmessage = (e) => {
           appendMessage('[user WS] ' + e.data);
         };
-        userSocket.onclose = () => {
-          appendMessage('[user WS] disconnected');
+        userSocket.onerror = (err) => {
+          appendMessage('[user WS] error: ' + (err?.message || JSON.stringify(err)));
+          console.error('userSocket error', err);
+        };
+        userSocket.onclose = (ev) => {
+          appendMessage('[user WS] disconnected (code=' + ev.code + ', reason=' + (ev.reason || '') + ')');
           document.getElementById('connectUser').disabled = false;
           document.getElementById('disconnectUser').disabled = true;
+          console.info('userSocket closed', ev);
         };
       });
 
