@@ -28,4 +28,9 @@ urlpatterns = [
 
     # Simple frontend page for testing WebSocket and REST endpoints
     path('', TemplateView.as_view(template_name='index.html'), name='home'),
+
+    path("api/", include("chat_messages.urls")),
+    path("api/", include("chats.urls")),
+    path('api/',include('users.urls')),
+    path('login/', include('rest_framework.urls')),
 ]

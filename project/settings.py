@@ -141,7 +141,6 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "PROJECT": {"hosts": [("127.0.0.1", 6379)]},
-        # "CONFIG": {"hosts": [("127.0.0.1", 6379)]},
     },
 }
 
@@ -161,6 +160,8 @@ REST_FRAMEWORK = {
 
 
 from datetime import timedelta
+
+
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
