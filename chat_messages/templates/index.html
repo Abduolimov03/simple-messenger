@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Simple Messenger — Test Frontend</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; padding: 20px; }
+      .col { display:flex; gap:20px }
+      .box { border:1px solid #ddd; padding:12px; border-radius:6px; width:520px }
+      .messages { height:300px; overflow:auto; background:#fafafa; padding:8px; border-radius:6px }
+      .controls { margin-top:8px }
+      input, button, select { padding:8px; font-size:14px }
+      label { display:block; margin-top:8px }
+    </style>
+  </head>
+  <body>
+    <h2>Simple Messenger — Test Frontend</h2>
+
+    <div class="col">
+      <div class="box">
+        <h3>Connection</h3>
+        <label>Username <input id="username" placeholder="alice" value="alice"></label>
+        <label>Room name <input id="room" placeholder="room1" value="room1"></label>
+        <label>Available rooms
+          <div style="display:flex; gap:8px; align-items:center;">
+            <select id="roomSelect" style="flex:1">
+              <option value="">(loading...)</option>
+            </select>
+            <button id="refreshRooms">Refresh</button>
+          </div>
+        </label>
+        <label>Receiver username <input id="receiver" placeholder="bob" value="bob"></label>
+
+        <div class="controls">
+          <button id="connectChat">Connect Chat WS</button>
+          <button id="disconnectChat" disabled>Disconnect Chat WS</button>
+          <button id="connectUser">Connect User WS</button>
+          <button id="disconnectUser" disabled>Disconnect User WS</button>
+        </div>
+
+        <h4>Chat messages</h4>
+        <div id="messages" class="messages"></div>
+
+        <div style="margin-top:8px">
+          <input id="messageInput" placeholder="Type a message" style="width:70%">
+          <button id="sendBtn">Send</button>
+        </div>
+
+        <div style="margin-top:8px">
+          <button id="typingStart">Typing start</button>
+          <button id="typingStop">Typing stop</button>
+          <button id="markRead">Mark read (demo id=1)</button>
+        </div>
+
+      </div>
+
+      <div class="box">
+        <h3>REST API</h3>
+        <p>Quick REST calls to the backend (no auth handled here).</p>
+        <div>
+          <button id="fetchMessages">Fetch /chat_messages/messages/ (GET)</button>
+        </div>
+        <pre id="restOutput" style="height:320px; overflow:auto; background:#fafafa; padding:8px; border-radius:6px"></pre>
+      </div>
+    </div>
+
+    <script>
+      // Simple frontend to talk to your Django Channels endpoints
+      let chatSocket = null;
+      let userSocket = null;
+
+      function appendMessage(txt) {
+        const out = document.getElementById('messages');
+        const el = document.createElement('div');
+        el.textContent = txt;
+        out.appendChild(el);
+        out.scrollTop = out.scrollHeight;
+      }
+
+      function wsScheme() {
+        return window.location.protocol === 'https:' ? 'wss' : 'ws';
+      }
+
+      document.getElementById('connectChat').addEventListener('click', () => {
+        const username = document.getElementById('username').value.trim();
+        // prefer selected room from dropdown if present
+        const roomSelect = document.getElementById('roomSelect');
+        const selectedRoom = roomSelect && roomSelect.value ? roomSelect.value.trim() : '';
+        const room = selectedRoom || document.getElementById('room').value.trim();
+        if (!room || !username) { alert('set username and room'); return }
+
+        const url = `${wsScheme()}://${window.location.host}/ws/chat/${room}/`;
+        chatSocket = new WebSocket(url);
+
+        chatSocket.onopen = () => {
+          appendMessage('[chat WS] connected to ' + url);
+          document.getElementById('connectChat').disabled = true;
+          document.getElementById('disconnectChat').disabled = false;
+        };
+
+        chatSocket.onmessage = (e) => {
+          try {
+            const data = JSON.parse(e.data);
+            if (data.event === 'typing') {
+              appendMessage(`[typing] ${data.username} ${data.status}`);
+            } else if (data.event === 'read_update') {
+              appendMessage(`[read] msg ${data.message_id} by ${data.username} at ${data.read_at}`);
+            } else if (data.type === 'chat_message' || data.message) {
+              appendMessage(`[msg] ${data.timestamp || ''} ${data.sender}: ${data.message}`);
+            } else {
+              appendMessage('[chat WS] ' + JSON.stringify(data));
+            }
+          } catch (err) {
+            appendMessage('[chat WS] (raw) ' + e.data);
+          }
+        };
+
+        chatSocket.onclose = () => {
+          appendMessage('[chat WS] disconnected');
+          document.getElementById('connectChat').disabled = false;
+          document.getElementById('disconnectChat').disabled = true;
+        };
+      });
+
+      document.getElementById('disconnectChat').addEventListener('click', () => {
+        if (chatSocket) chatSocket.close();
+      });
+
+      document.getElementById('connectUser').addEventListener('click', () => {
+        const username = document.getElementById('username').value.trim();
+        if (!username) { alert('set username'); return }
+        const url = `${wsScheme()}://${window.location.host}/ws/users/${username}/`;
+        userSocket = new WebSocket(url);
+        userSocket.onopen = () => {
+          appendMessage('[user WS] connected to ' + url);
+          document.getElementById('connectUser').disabled = true;
+          document.getElementById('disconnectUser').disabled = false;
+        };
+        userSocket.onmessage = (e) => {
+          appendMessage('[user WS] ' + e.data);
+        };
+        userSocket.onclose = () => {
+          appendMessage('[user WS] disconnected');
+          document.getElementById('connectUser').disabled = false;
+          document.getElementById('disconnectUser').disabled = true;
+        };
+      });
+
+      document.getElementById('disconnectUser').addEventListener('click', () => {
+        if (userSocket) userSocket.close();
+      });
+
+      document.getElementById('sendBtn').addEventListener('click', () => {
+        const msg = document.getElementById('messageInput').value.trim();
+        const username = document.getElementById('username').value.trim();
+        const receiver = document.getElementById('receiver').value.trim();
+        if (!chatSocket || chatSocket.readyState !== WebSocket.OPEN) { alert('chat socket not connected'); return }
+        if (!msg) return;
+        const payload = { message: msg, sender: username, receiver: receiver };
+        chatSocket.send(JSON.stringify(payload));
+        document.getElementById('messageInput').value = '';
+      });
+
+      document.getElementById('typingStart').addEventListener('click', () => {
+        const username = document.getElementById('username').value.trim();
+        if (!chatSocket || chatSocket.readyState !== WebSocket.OPEN) { alert('chat socket not connected'); return }
+        chatSocket.send(JSON.stringify({ event: 'typing_start', username }));
+      });
+
+      document.getElementById('typingStop').addEventListener('click', () => {
+        const username = document.getElementById('username').value.trim();
+        if (!chatSocket || chatSocket.readyState !== WebSocket.OPEN) { alert('chat socket not connected'); return }
+        chatSocket.send(JSON.stringify({ event: 'typing_stop', username }));
+      });
+
+      document.getElementById('markRead').addEventListener('click', () => {
+        const username = document.getElementById('username').value.trim();
+        if (!chatSocket || chatSocket.readyState !== WebSocket.OPEN) { alert('chat socket not connected'); return }
+        // demo uses id=1; replace as needed
+        chatSocket.send(JSON.stringify({ event: 'mark_read', message_id: 1, username }));
+      });
+
+      document.getElementById('fetchMessages').addEventListener('click', async () => {
+        const out = document.getElementById('restOutput');
+        out.textContent = 'Loading...';
+        try {
+          const res = await fetch('/chat_messages/messages/');
+          if (!res.ok) {
+            out.textContent = `HTTP ${res.status} ${res.statusText}`;
+            return;
+          }
+          const data = await res.json();
+          out.textContent = JSON.stringify(data, null, 2);
+        } catch (err) {
+          out.textContent = 'Fetch error: ' + err;
+        }
+      });
+
+      // Fetch available chats and populate room select
+      async function fetchRooms() {
+        const select = document.getElementById('roomSelect');
+        select.innerHTML = '<option value="">(loading...)</option>';
+        try {
+          const res = await fetch('/chat/chat_chat/');
+          if (!res.ok) {
+            select.innerHTML = `<option value="">HTTP ${res.status}</option>`;
+            return;
+          }
+          const data = await res.json();
+          // data is expected to be a list of chat objects
+          if (!Array.isArray(data) || data.length === 0) {
+            select.innerHTML = '<option value="">(no chats)</option>';
+            return;
+          }
+          select.innerHTML = '';
+          data.forEach(chat => {
+            // prefer title, fallback to chat_type + id
+            const label = chat.title || `${chat.chat_type || 'chat'} #${chat.id}`;
+            const opt = document.createElement('option');
+            // we'll use chat.id as the room identifier; if you use a different room naming, adjust accordingly
+            opt.value = chat.id;
+            opt.textContent = label;
+            select.appendChild(opt);
+          });
+          // when user picks a room, copy id into the room input (so existing connect uses it)
+          select.addEventListener('change', (e) => {
+            const val = e.target.value;
+            if (val) document.getElementById('room').value = val;
+          });
+        } catch (err) {
+          select.innerHTML = '<option value="">(fetch error)</option>';
+        }
+      }
+
+      document.getElementById('refreshRooms').addEventListener('click', (e) => {
+        e.preventDefault();
+        fetchRooms();
+      });
+
+      // auto-load rooms on page open
+      window.addEventListener('DOMContentLoaded', () => {
+        fetchRooms();
+      });
+
+      // Helpful: allow pressing Enter to send message
+      document.getElementById('messageInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') document.getElementById('sendBtn').click();
+      });
+    </script>
+  </body>
+</html>

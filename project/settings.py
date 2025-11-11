@@ -135,7 +135,7 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-ASGI_APPLICATION = 'telegram_backend.asgi.application'
+ASGI_APPLICATION = 'project.asgi.application'
 
 CHANNEL_LAYERS = {
     "default": {

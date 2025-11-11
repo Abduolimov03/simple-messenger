@@ -17,11 +17,15 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
+from django.views.generic import TemplateView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("chat_messages/", include("chat_messages.urls")),
     path("chat/", include("chats.urls")),
-    path('users/',include('users.urls')),
+    path('users/', include('users.urls')),
     path('login/', include('rest_framework.urls')),  # login
+
+    # Simple frontend page for testing WebSocket and REST endpoints
+    path('', TemplateView.as_view(template_name='index.html'), name='home'),
 ]
