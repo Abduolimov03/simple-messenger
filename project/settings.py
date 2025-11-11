@@ -140,7 +140,8 @@ ASGI_APPLICATION = 'project.asgi.application'
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "PROJECT": {"hosts": [("127.0.0.1", 6379)]},
+        # channels_redis expects the key 'CONFIG' not 'PROJECT'
+        "CONFIG": {"hosts": [("127.0.0.1", 6379)]},
     },
 }
 
