@@ -1,19 +1,19 @@
 import json
-from datetime import datetime
 from channels.generic.websocket import AsyncWebsocketConsumer
-from django.contrib.auth.models import User
 from django.utils.timezone import now
 
 class UserStatusConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+
         self.username = self.scope["url_route"]["kwargs"]["username"]
         self.user_group_name = f"user_{self.username}"
-
 
         await self.channel_layer.group_add(self.user_group_name, self.channel_name)
         await self.accept()
 
-        await self.set_user_online_status(True)
+        await self.set_user_online_status(True, User)
 
         await self.channel_layer.group_send(
             self.user_group_name,
@@ -25,7 +25,10 @@ class UserStatusConsumer(AsyncWebsocketConsumer):
         )
 
     async def disconnect(self, close_code):
-        await self.set_user_online_status(False)
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+
+        await self.set_user_online_status(False, User)
 
         await self.channel_layer.group_send(
             self.user_group_name,
@@ -42,7 +45,7 @@ class UserStatusConsumer(AsyncWebsocketConsumer):
     async def user_status(self, event):
         await self.send(text_data=json.dumps(event))
 
-    async def set_user_online_status(self, is_online):
+    async def set_user_online_status(self, is_online, User):
         try:
             user = User.objects.get(username=self.username)
             profile = user.profile
