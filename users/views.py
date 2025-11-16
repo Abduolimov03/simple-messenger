@@ -59,7 +59,7 @@ class DeviceViewSet(viewsets.ModelViewSet):
     queryset = Device.objects.all()
     serializer_class = DeviceSerializer
     # permission_classes = [permissions.IsAuthenticated]
-    permission_classes = [AllowAny] # test qilish uchun
+    permission_classes = [AllowAny] # test  uchun
 
     def perform_create(self, serializer):
         serializer.save()
